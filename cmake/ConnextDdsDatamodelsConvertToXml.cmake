@@ -14,8 +14,8 @@
 ###############################################################################
 
 #[[
-connextdds_datamodels_generate_code
------------------------------------
+connextdds_datamodels_convert_to_xml
+------------------------------------
 
 This function calls rtiddsgen to all IDL files included in the INPUT_FOLDERS.
 Then, this function returns the generated files.
@@ -27,9 +27,6 @@ Input parameters:
 
 ``OUTPUT_FOLDER`` (mandatory)
     Folder that will contain the generated files.
-
-``LANG`` (optional)
-    The language that rtiddsgen will generate code for. Default: C++11
 
 ``IGNORE_IDL_NAMES`` (optional)
     List of file names (without extension) that will be ignored and, therefore
@@ -43,27 +40,20 @@ Input parameters:
 ``CODEGEN_EXTRA_ARGS`` (optional)
     Additional flags for Codegen.
 
-Output parameters:
-
-``GENERATED_SRC_FILES``
-    List of all generated soruce files. The extension of these files depends
-    on the LANG input parameter.
-
  * How to use it:
 
-    connextdds_datamodels_generate_code(
+    connextdds_datamodels_convert_to_xml(
         INPUT_FOLDERS "datamodel/idl"
-        OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/datamodel/idl"
-        LANG C++11
+        OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/datamodel/xml"
         IGNORE_IDL_NAMES "ALMAS_Management_DLRL"
         IDL_DEPENDENCIES_FOLDERS "${DDS_DATAMODELS_UTILS_DIR}/dds"
         CODEGEN_EXTRA_ARGS "-verbosity" "1"
     )
 ]]
 
-function(connextdds_datamodels_generate_code)
+function(connextdds_datamodels_convert_to_xml)
     set(_BOOLEANS)
-    set(_SINGLE_VALUE_ARGS OUTPUT_FOLDER LANG)
+    set(_SINGLE_VALUE_ARGS OUTPUT_FOLDER)
     set(_MULTI_VALUE_ARGS
         INPUT_FOLDERS IGNORE_IDL_NAMES IDL_DEPENDENCIES_FOLDERS CODEGEN_EXTRA_ARGS)
 
@@ -84,10 +74,6 @@ function(connextdds_datamodels_generate_code)
             "The mandatory parameter OUTPUT_FOLDER is not defined.")
     endif()
 
-    if (NOT DEFINED _args_LANG)
-        set(_args_LANG C++11)
-    endif()
-
     include(ConnextDdsCodegen)
 
     # Get the name of all the idl files under datamodel/idl/
@@ -104,21 +90,26 @@ function(connextdds_datamodels_generate_code)
 
     cmake_policy(SET CMP0057 NEW)
 
-    # Call codegen to generate code for all IDL files
+    # Call codegen to convert to XML all IDL files
+    set(converted_idl_files)
     foreach(idl_file_path IN LISTS idl_files)
         get_filename_component(idl_name ${idl_file_path} NAME_WE)
         if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
-            connextdds_rtiddsgen_run(
-                IDL_FILE "${idl_file_path}"
-                LANG ${_args_LANG}
+            message(STATUS "Generating XML for ${idl_file_path}")
+            connextdds_rtiddsgen_convert(
+                INPUT "${idl_file_path}"
+                FROM "IDL"
+                TO "XML"
                 OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}"
                 INCLUDE_DIRS ${_args_IDL_DEPENDENCIES_FOLDERS}
                 EXTRA_ARGS ${_args_CODEGEN_EXTRA_ARGS}
             )
-            list(APPEND src_files ${${idl_name}_CXX11_SOURCES})
+            list(APPEND converted_idl_files "${_args_OUTPUT_FOLDER}/${idl_name}.xml")
         endif()
     endforeach()
-
-    set(GENERATED_SRC_FILES ${src_files} PARENT_SCOPE)
+    add_custom_target(dds_datamodels_xml_output_files ALL
+        DEPENDS
+            ${converted_idl_files}
+    )
 
 endfunction()

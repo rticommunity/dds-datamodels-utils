@@ -92,13 +92,21 @@ function(connextdds_datamodels_convert_to_xml)
 
     cmake_policy(SET CMP0057 NEW)
 
+    set(full_input_path)
+    if(IS_ABSOLUTE ${input_folder})
+        set(full_input_path "${input_folder}")
+    else()
+        set(full_input_path "${CMAKE_SOURCE_DIR}/${input_folder}")
+    endif()
+
     # Call codegen to convert to XML all IDL files
     set(converted_idl_files)
     foreach(idl_file_path IN LISTS idl_files)
         get_filename_component(idl_name ${idl_file_path} NAME_WE)
         if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
             message(STATUS "Generating XML for ${idl_file_path}")
-            file(RELATIVE_PATH path_to_idl_file "${input_folder}" "${idl_file_path}")
+            get_filename_component(idl_folder "${idl_file_path}" DIRECTORY)
+            file(RELATIVE_PATH path_to_idl_file "${full_input_path}" "${idl_folder}")
             connextdds_rtiddsgen_convert(
                 INPUT "${idl_file_path}"
                 FROM "IDL"

@@ -33,9 +33,11 @@ Input parameters:
     rtiddsgen will not generate code for.
 
 ``IDL_DEPENDENCIES_FOLDERS`` (optional)
-    Folder that contains dependencies of the IDL files. For example if an IDL
-    file has an #include "file.idl", this variable should contain the folder
-    where file.idl is located.
+    Folders that contain dependencies of the IDL files. These dependencies will
+    be used for generating code.
+
+``INCLUDE_DIRS`` (optional)
+    Directores that are used but no code generated.
 
 ``CODEGEN_EXTRA_ARGS`` (optional)
     Additional flags for Codegen.
@@ -55,7 +57,7 @@ function(connextdds_datamodels_convert_to_xml)
     set(_BOOLEANS)
     set(_SINGLE_VALUE_ARGS OUTPUT_FOLDER)
     set(_MULTI_VALUE_ARGS
-        INPUT_FOLDERS IGNORE_IDL_NAMES IDL_DEPENDENCIES_FOLDERS CODEGEN_EXTRA_ARGS)
+        INPUT_FOLDERS IGNORE_IDL_NAMES IDL_DEPENDENCIES_FOLDERS INCLUDE_DIRS CODEGEN_EXTRA_ARGS)
 
     cmake_parse_arguments(_args
         "${_BOOLEANS}"
@@ -79,12 +81,12 @@ function(connextdds_datamodels_convert_to_xml)
     # Get the name of all the idl files under datamodel/idl/
     set(idl_files)
     foreach(input_folder in ${_args_INPUT_FOLDERS})
-        file(GLOB idl_files_from_folder "${input_folder}/*.idl")
+        file(GLOB idl_files_from_folder "${input_folder}/**/*.idl")
         list(APPEND idl_files ${idl_files_from_folder})
     endforeach()
 
     foreach(input_folder in ${_args_IDL_DEPENDENCIES_FOLDERS})
-        file(GLOB idl_files_from_folder "${input_folder}/*.idl")
+        file(GLOB idl_files_from_folder "${input_folder}/**/*.idl")
         list(APPEND idl_files ${idl_files_from_folder})
     endforeach()
 
@@ -96,11 +98,12 @@ function(connextdds_datamodels_convert_to_xml)
         get_filename_component(idl_name ${idl_file_path} NAME_WE)
         if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
             message(STATUS "Generating XML for ${idl_file_path}")
+            file(RELATIVE_PATH path_to_idl_file "${input_folder}" "${idl_file_path}")
             connextdds_rtiddsgen_convert(
                 INPUT "${idl_file_path}"
                 FROM "IDL"
                 TO "XML"
-                OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}"
+                OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}/${path_to_idl_file}"
                 INCLUDE_DIRS ${_args_IDL_DEPENDENCIES_FOLDERS}
                 EXTRA_ARGS ${_args_CODEGEN_EXTRA_ARGS}
             )

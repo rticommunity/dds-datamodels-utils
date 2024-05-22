@@ -106,19 +106,11 @@ function(connextdds_datamodels_generate_code)
 
     cmake_policy(SET CMP0057 NEW)
 
-    set(full_input_path)
-    if(IS_ABSOLUTE ${input_folder})
-        set(full_input_path "${input_folder}")
-    else()
-        set(full_input_path "${CMAKE_SOURCE_DIR}/${input_folder}")
-    endif()
-
     # Call codegen to generate code for all IDL files
     foreach(idl_file_path IN LISTS idl_files)
         get_filename_component(idl_name ${idl_file_path} NAME_WE)
         if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
             message(STATUS "Generating Code for ${idl_file_path}")
-            get_filename_component(idl_folder "${idl_file_path}" DIRECTORY)
             file(RELATIVE_PATH path_to_idl_file "${input_folder}" "${idl_file_path}")
             connextdds_rtiddsgen_run(
                 IDL_FILE "${idl_file_path}"

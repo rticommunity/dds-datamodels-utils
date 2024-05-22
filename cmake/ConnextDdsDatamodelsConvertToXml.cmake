@@ -53,6 +53,8 @@ Input parameters:
     )
 ]]
 
+include (ConnextDdsDatamodelsUtils)
+
 function(connextdds_datamodels_convert_to_xml)
     set(_BOOLEANS)
     set(_SINGLE_VALUE_ARGS OUTPUT_FOLDER)
@@ -78,44 +80,51 @@ function(connextdds_datamodels_convert_to_xml)
 
     include(ConnextDdsCodegen)
 
-    # Get the name of all the idl files under datamodel/idl/
-    set(idl_files)
-    foreach(input_folder in ${_args_INPUT_FOLDERS})
-        file(GLOB idl_files_from_folder "${input_folder}/**/*.idl")
-        list(APPEND idl_files ${idl_files_from_folder})
+    # Get the name of all the idl files under the input folder
+    set(idl_files_full_path)
+    set(idl_files_relative_path)
+    foreach(input_folder ${_args_INPUT_FOLDERS})
+        file(GLOB_RECURSE idl_files "${input_folder}/*.idl")
+        list(APPEND idl_files_full_path ${idl_files})
+
+        foreach(idl_file ${idl_files_full_path})
+            set(full_input_path)
+            if(IS_ABSOLUTE ${input_folder})
+                set(full_input_path "${input_folder}")
+            else()
+                set(full_input_path "${CMAKE_SOURCE_DIR}/${input_folder}")
+            endif()
+            file(RELATIVE_PATH relative_idl_files "${full_input_path}" "${idl_file}")
+            list(APPEND idl_files_relative_path ${relative_idl_files})
+        endforeach()
     endforeach()
 
     foreach(input_folder in ${_args_IDL_DEPENDENCIES_FOLDERS})
-        file(GLOB idl_files_from_folder "${input_folder}/**/*.idl")
-        list(APPEND idl_files ${idl_files_from_folder})
+        file(GLOB idl_files_from_folder "${input_folder}/*.idl")
+        list(APPEND idl_files_full_path ${idl_files_from_folder})
     endforeach()
 
     cmake_policy(SET CMP0057 NEW)
 
-    set(full_input_path)
-    if(IS_ABSOLUTE ${input_folder})
-        set(full_input_path "${input_folder}")
-    else()
-        set(full_input_path "${CMAKE_SOURCE_DIR}/${input_folder}")
-    endif()
-
     # Call codegen to convert to XML all IDL files
     set(converted_idl_files)
-    foreach(idl_file_path IN LISTS idl_files)
+    foreach(idl_file_path IN LISTS idl_files_full_path)
         get_filename_component(idl_name ${idl_file_path} NAME_WE)
         if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
             message(STATUS "Generating XML for ${idl_file_path}")
-            get_filename_component(idl_folder "${idl_file_path}" DIRECTORY)
-            file(RELATIVE_PATH path_to_idl_file "${full_input_path}" "${idl_folder}")
+            get_output_path("${idl_name}.idl" "${idl_files_relative_path}" output_relative_path)
+
             connextdds_rtiddsgen_convert(
                 INPUT "${idl_file_path}"
                 FROM "IDL"
                 TO "XML"
-                OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}/${path_to_idl_file}"
-                INCLUDE_DIRS ${_args_IDL_DEPENDENCIES_FOLDERS}
+                OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}/${output_relative_path}"
+                INCLUDE_DIRS
+                    ${_args_IDL_DEPENDENCIES_FOLDERS}
+                    ${_args_INCLUDE_DIRS}
                 EXTRA_ARGS ${_args_CODEGEN_EXTRA_ARGS}
             )
-            list(APPEND converted_idl_files "${_args_OUTPUT_FOLDER}/${idl_name}.xml")
+            list(APPEND converted_idl_files "${_args_OUTPUT_FOLDER}/${output_relative_path}/${idl_name}.xml")
         endif()
     endforeach()
     add_custom_target(dds_datamodels_xml_output_files ALL
@@ -123,4 +132,19 @@ function(connextdds_datamodels_convert_to_xml)
             ${converted_idl_files}
     )
 
+endfunction()
+
+# Function to find the relative path without the filename
+function(get_output_path idl_name output_paths result_var)
+
+    set(output_path "")
+    foreach(dir IN LISTS output_paths)
+        get_filename_component(rel_filename "${dir}" NAME)
+        if("${idl_name}" STREQUAL "${rel_filename}")
+            get_filename_component(rel_dir "${dir}" DIRECTORY)
+            set(output_path "${rel_dir}")
+            break()
+        endif()
+    endforeach()
+    set(${result_var} "${output_path}" PARENT_SCOPE)
 endfunction()

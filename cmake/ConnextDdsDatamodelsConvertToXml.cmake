@@ -53,8 +53,6 @@ Input parameters:
     )
 ]]
 
-include (ConnextDdsDatamodelsUtils)
-
 function(connextdds_datamodels_convert_to_xml)
     set(_BOOLEANS)
     set(_SINGLE_VALUE_ARGS OUTPUT_FOLDER)

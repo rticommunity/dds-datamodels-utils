@@ -95,7 +95,7 @@ function(connextdds_datamodels_generate_code)
     # Get the name of all the idl files under datamodel/idl/
     set(idl_files)
     foreach(input_folder in ${_args_INPUT_FOLDERS})
-        file(GLOB idl_files_from_folder "${input_folder}/**/*.idl")
+        file(GLOB_RECURSE idl_files_from_folder "${input_folder}/**/*.idl")
         list(APPEND idl_files ${idl_files_from_folder})
     endforeach()
 

@@ -88,7 +88,7 @@ function(connextdds_datamodels_convert_to_xml)
 
     include(ConnextDdsCodegen)
 
-    # to allow IN LISTS
+    # to allow IN_LIST
     cmake_policy(SET CMP0057 NEW)
 
     # Call codegen to convert all IDL files to XML

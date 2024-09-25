@@ -102,7 +102,7 @@ function(connextdds_datamodels_generate_code)
 
     include(ConnextDdsCodegen)
 
-    # to allow IN LISTS
+    # to allow IN_LIST
     cmake_policy(SET CMP0057 NEW)
 
     # Call codegen to generate code for all IDL files

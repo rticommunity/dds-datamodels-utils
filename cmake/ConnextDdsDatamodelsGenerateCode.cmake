@@ -63,6 +63,8 @@ Output parameters:
     )
 ]]
 
+include(ConnextDdsDatamodelsCommon)
+
 function(connextdds_datamodels_generate_code)
     set(_BOOLEANS)
     set(_SINGLE_VALUE_ARGS OUTPUT_FOLDER LANG)
@@ -90,39 +92,47 @@ function(connextdds_datamodels_generate_code)
         set(_args_LANG C++11)
     endif()
 
+    convert_absolute_path_list(_args_INCLUDE_DIRS)
+    convert_absolute_path_list(_args_IDL_DEPENDENCIES_FOLDERS)
+    convert_absolute_path_list(_args_INPUT_FOLDERS)
+
+    # create a list of all idl source files (input parameters and dependencies)
+    set(input_and_dependencies_dir)
+    list(APPEND input_and_dependencies_dir ${_args_INPUT_FOLDERS} ${_args_IDL_DEPENDENCIES_FOLDERS})
+
     include(ConnextDdsCodegen)
 
-    # Get the name of all the idl files under datamodel/idl/
-    set(idl_files)
-    foreach(input_folder in ${_args_INPUT_FOLDERS})
-        file(GLOB_RECURSE idl_files_from_folder "${input_folder}/**/*.idl")
-        list(APPEND idl_files ${idl_files_from_folder})
-    endforeach()
-
-    foreach(input_folder in ${_args_IDL_DEPENDENCIES_FOLDERS})
-        file(GLOB_RECURSE idl_files_from_folder "${input_folder}/**/*.idl")
-        list(APPEND idl_files ${idl_files_from_folder})
-    endforeach()
-
+    # to allow IN LISTS
     cmake_policy(SET CMP0057 NEW)
 
     # Call codegen to generate code for all IDL files
-    foreach(idl_file_path IN LISTS idl_files)
-        get_filename_component(idl_name ${idl_file_path} NAME_WE)
-        if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
-            message(STATUS "Generating Code for ${idl_file_path}")
-            file(RELATIVE_PATH path_to_idl_file "${input_folder}" "${idl_file_path}")
-            connextdds_rtiddsgen_run(
-                IDL_FILE "${idl_file_path}"
-                LANG ${_args_LANG}
-                OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}/${path_to_idl_file}"
-                INCLUDE_DIRS
-                    ${_args_IDL_DEPENDENCIES_FOLDERS}
-                    ${_args_INCLUDE_DIRS}
-                EXTRA_ARGS ${_args_CODEGEN_EXTRA_ARGS}
-            )
-            list(APPEND src_files ${${idl_name}_CXX11_SOURCES})
-        endif()
+    foreach(input_folder in ${input_and_dependencies_dir})
+        # get all IDL files from the input folder
+        file(GLOB_RECURSE idl_files "${input_folder}/**/*.idl")
+
+        foreach(idl_file_path IN LISTS idl_files)
+            get_filename_component(idl_name ${idl_file_path} NAME_WE)
+
+            if(NOT idl_name IN_LIST _args_IGNORE_IDL_NAMES)
+                message(STATUS "Generating Code for ${idl_file_path}")
+                # use the relative path to preserve the folder structure in the
+                # output directory
+                file(RELATIVE_PATH idl_filename_relative "${input_folder}" "${idl_file_path}")
+                get_filename_component(path_to_idl_file "${idl_filename_relative}" DIRECTORY)
+
+                connextdds_rtiddsgen_run(
+                    IDL_FILE "${idl_file_path}"
+                    LANG ${_args_LANG}
+                    OUTPUT_DIRECTORY "${_args_OUTPUT_FOLDER}/${path_to_idl_file}"
+                    INCLUDE_DIRS
+                        ${_args_IDL_DEPENDENCIES_FOLDERS}
+                        ${_args_INCLUDE_DIRS}
+                    EXTRA_ARGS ${_args_CODEGEN_EXTRA_ARGS}
+                )
+
+                list(APPEND src_files ${${idl_name}_CXX11_SOURCES})
+            endif()
+        endforeach()
     endforeach()
 
     set(GENERATED_SRC_FILES ${src_files} PARENT_SCOPE)

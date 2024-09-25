@@ -100,7 +100,7 @@ function(connextdds_datamodels_generate_code)
     endforeach()
 
     foreach(input_folder in ${_args_IDL_DEPENDENCIES_FOLDERS})
-        file(GLOB idl_files_from_folder "${input_folder}/**/*.idl")
+        file(GLOB_RECURSE idl_files_from_folder "${input_folder}/**/*.idl")
         list(APPEND idl_files ${idl_files_from_folder})
     endforeach()
 

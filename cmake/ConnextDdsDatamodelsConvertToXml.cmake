@@ -93,9 +93,17 @@ function(connextdds_datamodels_convert_to_xml)
 
     # Call codegen to convert all IDL files to XML
     set(converted_idl_files)
-    foreach(input_folder in ${input_and_dependencies_dir})
+    foreach(input_folder ${input_and_dependencies_dir})
         # get all IDL files from the input folder
-        file(GLOB_RECURSE idl_files "${input_folder}/**/*.idl")
+        # Match .idl files directly in the input folder
+        file(GLOB idl_files_direct "${input_folder}/*.idl")
+
+        # Match .idl files in subdirectories
+        file(GLOB_RECURSE idl_files_recursive "${input_folder}/**/*.idl")
+
+        # Combine both sets of files
+        set(idl_files)
+        list(APPEND idl_files ${idl_files_direct} ${idl_files_recursive})
 
         foreach(idl_file_path IN LISTS idl_files)
             get_filename_component(idl_name ${idl_file_path} NAME_WE)

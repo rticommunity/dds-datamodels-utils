@@ -138,11 +138,22 @@ function(connextdds_datamodels_generate_code)
                     EXTRA_ARGS ${_args_CODEGEN_EXTRA_ARGS}
                 )
 
-                list(APPEND src_files ${${idl_name}_CXX11_SOURCES})
+                if (${_args_LANG} STREQUAL "Python")
+                    list(APPEND python_files ${${idl_name}_PYTHON_SOURCES})
+                elseif(${_args_LANG} STREQUAL "C++11")
+                    list(APPEND src_files ${${idl_name}_CXX11_SOURCES})
+                endif()
             endif()
         endforeach()
     endforeach()
 
-    set(GENERATED_SRC_FILES ${src_files} PARENT_SCOPE)
+    if (${_args_LANG} STREQUAL "Python")
+        add_custom_target(dds_datamodels_python_generated_files ALL
+            DEPENDS
+                ${python_files}
+        )
+    elseif(${_args_LANG} STREQUAL "C++11")
+        set(GENERATED_SRC_FILES ${src_files} PARENT_SCOPE)
+    endif()
 
 endfunction()
